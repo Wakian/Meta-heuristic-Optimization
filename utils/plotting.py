@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D   # Needed for 3D projection
+import os
 
 def plot_3d_surface(
     f,
@@ -72,3 +73,43 @@ def plot_3d_surface(
         print(f"[plotting] Saved plot to {filepath}")
 
     plt.close(fig)  # Close figure to avoid memory buildup
+
+def plot_3d_route(points, route, title="TSP route", filename=None):
+    """
+    Plot a 3D route given `points` (Nx3 array) and `route` (sequence of indices).
+    Draws lines following the route and closing the route back to the origin.
+    """
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
+    pts = np.array(points)
+    route = list(route)
+
+    # Build full route with return to start
+    route_full = route + [route[0]]
+
+    X = pts[ [route_full], : ][0][:, 0]
+    Y = pts[ [route_full], : ][0][:, 1]
+    Z = pts[ [route_full], : ][0][:, 2]
+
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(X, Y, Z, linestyle='-', linewidth=1.5, marker='o', markersize=4)
+    ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], s=20, c='k', alpha=0.6)
+
+    # annotate order optionally (commented out by default to avoid clutter)
+    # for i, idx in enumerate(route):
+    #     ax.text(pts[idx,0], pts[idx,1], pts[idx,2], str(i), color='red')
+
+    ax.set_title(title)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+
+    if filename:
+        filepath = f"results/plots/{filename}"
+        os.makedirs("results/plots", exist_ok=True)
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        print(f"[plotting] Saved TSP route plot to {filepath}")
+
+    plt.close(fig)

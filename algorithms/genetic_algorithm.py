@@ -122,3 +122,4 @@ class GeneticTSP:
             pop = np.array(new_pop, dtype=int)
 
         return best_ind, self.max_gen
+
