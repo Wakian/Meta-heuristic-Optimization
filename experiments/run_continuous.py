@@ -15,6 +15,8 @@ from problems.continuous.problem4 import f as f4, domain as d4
 from problems.continuous.problem5 import f as f5, domain as d5
 from problems.continuous.problem6 import f as f6, domain as d6
 
+from utils.helpers import compute_mode, save_mode
+
 
 def run_all_continuous():
 
@@ -60,6 +62,8 @@ def run_all_continuous():
             if mode == "max":
                 f_best = -f_best
             results_hc.append((x_best, f_best))
+        mode_x, mode_f, count = compute_mode(results_hc)
+        save_mode(f"{name}_hc", mode_x, mode_f, count)
 
         # ------------------- LOCAL RANDOM SEARCH -------------------
         print("Running Local Random Search...")
@@ -69,6 +73,8 @@ def run_all_continuous():
             if mode == "max":
                 f_best = -f_best
             results_lrs.append((x_best, f_best))
+        mode_x, mode_f, count = compute_mode(results_lrs)
+        save_mode(f"{name}_lrs", mode_x, mode_f, count)
 
         # ------------------- GLOBAL RANDOM SEARCH -------------------
         print("Running Global Random Search...")
@@ -78,7 +84,9 @@ def run_all_continuous():
             if mode == "max":
                 f_best = -f_best
             results_grs.append((x_best, f_best))
-
+        mode_x, mode_f, count = compute_mode(results_grs)
+        save_mode(f"{name}_grs", mode_x, mode_f, count)
+        
         # ------------------- SAVE TO CSV -------------------
         save_table(f"{name}_hc",  results_hc)
         save_table(f"{name}_lrs", results_lrs)
