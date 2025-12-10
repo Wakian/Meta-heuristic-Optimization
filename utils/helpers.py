@@ -90,18 +90,28 @@ def save_mode(name, mode_x, mode_f, count):
     """
     Save mode information into CSV.
 
-    name : problem + algorithm name
-    mode_x : np.array([x1, x2])
-    mode_f : float
-    count  : int
+    mode_x can be:
+    - scalar (e.g., generations)
+    - vector (e.g., [x1, x2] for continuous problems)
     """
 
     path = f"results/tables/{name}_mode.csv"
     os.makedirs("results/tables", exist_ok=True)
 
+    # Normalize mode_x to always be iterable
+    if np.isscalar(mode_x):
+        mode_values = [mode_x]
+    else:
+        mode_values = list(mode_x)
+
     with open(path, "w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["x1", "x2", "f_best", "count"])
-        writer.writerow([mode_x[0], mode_x[1], mode_f, count])
+
+        # Header
+        header = [f"x{i}" for i in range(len(mode_values))] + ["f_best", "count"]
+        writer.writerow(header)
+
+        # Content
+        writer.writerow(mode_values + [mode_f, count])
 
     print(f"[saved mode] {path}")
