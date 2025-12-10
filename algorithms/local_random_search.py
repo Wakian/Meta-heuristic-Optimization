@@ -1,78 +1,44 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 class LocalRandomSearch:
-    def __init__(self, max_it, points, sigma):
+    """
+    Local Random Search for continuous optimization.
+    
+    sigma defines the size of the local neighborhood.
+    """
+
+    def __init__(self, f, domain, sigma=0.4, max_it=1000):
+        self.f = f
+        self.domain = np.array(domain, dtype=float)
         self.sigma = sigma
-        self.max_it  = max_it
-        self.points = points
-        self.qtd_points = points.shape[0]
-        self.x_opt = np.random.permutation(self.qtd_points - 1) + 1
-        self.x_opt = np.concatenate(([0], self.x_opt))
-        self.f_opt = self.f(self.x_opt)
-        self.historico = [self.f_opt]
+        self.max_it = max_it
+        self.dim = len(domain)
 
-        # plot settings
-        self.fig = plt.figure(3)
-        self.ax = self.fig.subplots()
+    def _clip(self, x):
+        """Keeps x inside the domain box."""
+        for i in range(self.dim):
+            x[i] = np.clip(x[i], self.domain[i][0], self.domain[i][1])
+        return x
 
-        self.ax.scatter(points[:,0],points[:,1])
-        self.lines = []
-        self.update_plot()
-
-    def clear_lines(self):
-        for line in self.lines:
-            line.remove()
-        self.lines = []
-
-    def update_plot(self):
-        self.ax.set_title(f"Local Random Search {self.f_opt:.4f}")
-        for i in range(self.qtd_points):
-            p1 = self.points[self.x_opt[i]]
-            p2 = self.points[self.x_opt[(i+1)%self.qtd_points]]
-
-            if i == 0:
-                line = self.ax.plot([p1[0],p2[0]],[p1[1],p2[1]],c='r')
-            elif i == self.qtd_points - 1:
-                line = self.ax.plot([p1[0],p2[0]],[p1[1],p2[1]],c='g')
-            else:
-                line = self.ax.plot([p1[0],p2[0]],[p1[1],p2[1]],c='k')
-
-            self.lines.append(line[0])
-
-    def f(self, x):
-        d = 0
-        for i in range(self.qtd_points):
-            p1 = self.points[x[i]]
-            p2 = self.points[x[(i+1)%self.qtd_points]]
-            d += np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-        return d
-
-    def perturb(self):
-        x_cand = np.copy(self.x_opt)
-        idx1 = (np.random.permutation(self.qtd_points - 1) + 1)[:self.sigma]
-        idx2 = np.random.permutation(idx1)
-        x_cand[idx1] = x_cand[idx2]
-        return x_cand
+    def _neighbor(self, x):
+        """Generate local random point within sigma distance."""
+        step = np.random.normal(0, self.sigma, size=self.dim)
+        candidate = x + step
+        return self._clip(candidate)
 
     def search(self):
-        it = 0
-        while it < self.max_it:
-            x_cand = self.perturb()
-            f_cand = self.f(x_cand)
-            self.historico.append(self.f_opt)
+        """Standard LRS process."""
+        # Start in the lower bound (like hill climbing)
+        x = np.array([d[0] for d in self.domain], dtype=float)
+        best_x = x.copy()
+        best_f = self.f(*best_x)
 
-            if f_cand < self.f_opt:
-                self.x_opt = x_cand
-                self.f_opt = f_cand
-                plt.pause(.5)
-                self.clear_lines()
-                self.update_plot()
+        for _ in range(self.max_it):
+            candidate = self._neighbor(best_x)
+            value = self.f(*candidate)
 
-            it += 1
+            if value < best_f:  # LRS is MINIMIZATION by default
+                best_x = candidate
+                best_f = value
 
-        plt.figure(4)
-        plt.plot(self.historico)
-        plt.grid()
-        plt.title("LRS histórico")
-        plt.show()
+        return best_x, best_f

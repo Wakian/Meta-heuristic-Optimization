@@ -1,73 +1,62 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 class GlobalRandomSearch:
-    def __init__(self, max_it, points):
-        self.max_it  = max_it
-        self.points = points
-        self.qtd_points = points.shape[0]
-        self.x_opt = np.random.permutation(self.qtd_points - 1) + 1
-        self.x_opt = np.concatenate(([0], self.x_opt))
-        self.f_opt = self.f(self.x_opt)
-        self.historico = [self.f_opt]
+    """
+    Global Random Search for continuous optimization.
 
-        # plot settings
-        self.fig = plt.figure(1)
-        self.ax = self.fig.subplots()
-        self.ax.scatter(points[:,0],points[:,1])
-        self.lines = []
-        self.update_plot()
+    Signature:
+        GlobalRandomSearch(f, domain, sigma=0.4, max_it=1000)
 
-    def clear_lines(self):
-        for line in self.lines:
-            line.remove()
-        self.lines = []
+    Parameters
+    ----------
+    f : callable
+        Objective function f(x1, x2, ...)
+    domain : list of tuples
+        [(x1_min, x1_max), (x2_min, x2_max), ...]
+    sigma : float
+        (Optional) used only if you later wish to create 'local candidate around global sample'.
+        For plain GRS it's not necessary but kept to match LRS signature.
+    max_it : int
+        Maximum iterations.
+    """
 
-    def update_plot(self):
-        self.ax.set_title(f"Global Random Search {self.f_opt:.4f}")
-        for i in range(self.qtd_points):
-            p1 = self.points[self.x_opt[i]]
-            p2 = self.points[self.x_opt[(i+1)%self.qtd_points]]
+    def __init__(self, f, domain, sigma=0.4, max_it=1000):
+        self.f = f
+        self.domain = np.array(domain, dtype=float)
+        self.sigma = sigma
+        self.max_it = max_it
+        self.dim = len(domain)
 
-            if i == 0:
-                line = self.ax.plot([p1[0],p2[0]],[p1[1],p2[1]],c='r')
-            elif i == self.qtd_points - 1:
-                line = self.ax.plot([p1[0],p2[0]],[p1[1],p2[1]],c='g')
-            else:
-                line = self.ax.plot([p1[0],p2[0]],[p1[1],p2[1]],c='k')
+    def _sample_uniform(self):
+        """Sample uniformly in the domain box."""
+        x = np.empty(self.dim, dtype=float)
+        for i in range(self.dim):
+            lo, hi = self.domain[i]
+            x[i] = np.random.uniform(lo, hi)
+        return x
 
-            self.lines.append(line[0])
-
-    def f(self, x):
-        d = 0
-        for i in range(self.qtd_points):
-            p1 = self.points[x[i]]
-            p2 = self.points[x[(i+1)%self.qtd_points]]
-            d += np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-        return d
-
-    def perturb(self):
-        x_cand = np.random.permutation(self.qtd_points - 1) + 1
-        x_cand = np.concatenate(([0], x_cand))
-        return x_cand
+    def _clip(self, x):
+        for i in range(self.dim):
+            x[i] = np.clip(x[i], self.domain[i][0], self.domain[i][1])
+        return x
 
     def search(self):
-        it = 0
-        while it < self.max_it:
-            x_cand = self.perturb()
-            f_cand = self.f(x_cand)
-            self.historico.append(self.f_opt)
+        """
+        Runs plain Global Random Search:
+        - sample uniformly max_it times
+        - keep best found
+        Returns (best_x, best_f)
+        """
 
-            if f_cand < self.f_opt:
-                self.x_opt = x_cand
-                self.f_opt = f_cand
-                plt.pause(.5)
-                self.clear_lines()
-                self.update_plot()
+        # initial best: sample once
+        best_x = self._sample_uniform()
+        best_f = self.f(*best_x)
 
-            it += 1
+        for _ in range(self.max_it):
+            x_cand = self._sample_uniform()
+            f_cand = self.f(*x_cand)
+            if f_cand < best_f:   # default: minimization
+                best_x = x_cand
+                best_f = f_cand
 
-        plt.figure(2)
-        plt.plot(self.historico)
-        plt.grid()
-        plt.title("GRS histórico")
+        return best_x, best_f
